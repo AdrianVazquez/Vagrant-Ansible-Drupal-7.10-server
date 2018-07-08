@@ -1,0 +1,7 @@
+---
+# change to false to use VBox/Parallels shared folders. usually not necessary.
+nfs: 1
+
+# try assigning this to half of your machine's cores. if you assign too many, performance can degrade.
+cpus: 4
+memory: 2048

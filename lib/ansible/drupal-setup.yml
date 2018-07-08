@@ -1,0 +1,260 @@
+---
+# Play 0, get the new repos
+# We need to do this early so we can install NodeJS.
+- name: enable additional yum repos
+  hosts: all
+  sudo: yes
+  vars_files:
+    - vars/main.yml
+
+  roles:
+    - role: geerlingguy.repo-epel
+    - role: geerlingguy.repo-remi # PHP 5.4
+
+# Play 1
+- name: set up the system
+  hosts: all
+  vars_files:
+    - vars/main.yml
+  sudo: yes
+
+  pre_tasks:
+    - name: install requirements for Ansible SELinux module
+      yum: name=libselinux-python
+
+    - name: check if /etc/selinux/config exists, and create if not
+      stat: path=/etc/selinux/config
+      register: example_drupal_selinux_exists
+
+    - file: dest=/etc/selinux/config state=touch
+      when: example_drupal_selinux_exists.stat.exists == false
+
+    - name: check if selinux already disabled
+      command: getenforce
+      register: example_drupal_selinux_enabled
+      changed_when: false
+
+    - name: disable selinux
+      selinux: state=disabled
+      register: example_drupal_selinux_updated
+      when: example_drupal_selinux_enabled.stdout != "Disabled"
+
+    - name: check if machine restart needed
+      fail: msg="Please run `vagrant reload --provision` so SELinux updates take."
+      when: example_drupal_selinux_updated.changed
+
+    - name: check if we already updated system
+      stat: path=/root/.example-drupal-upgraded
+      register: first_update_run
+
+    - name: run first-time system update
+      yum: name=* state=latest
+      when: first_update_run.stat.exists == false
+
+    - file: name=/root/.example-drupal-upgraded state=touch
+      when: first_update_run.stat.exists == false
+
+    - name: install thing nginx needs
+      yum: name=libselinux-python state=latest
+
+    - name: install needed libraries
+      yum: name="{{ item }}" state=latest
+      with_items:
+        # similar to build-essential on Ubuntu/Debian. need it for XDebug.
+        - "@Development Tools"
+        - libpng-devel
+        - freetype-devel
+        - libxml2-devel
+        - libxslt-devel
+        - nodejs
+        - npm
+        - python-pip
+        - cronie
+
+    - name: update npm
+      npm: name=npm global=yes state=latest
+
+    - name: make sure cron is configured to run
+      service: name=crond state=started enabled=yes
+
+    - stat: path={{ ansible_env.HOME }}/.example-drupal-mysql-removed
+      register: example_drupal_mysql_removed
+
+    - name: remove mysql
+      yum: name={{ item }} state=absent
+      with_items:
+        - mysql
+        - mysql-libs
+      when: example_drupal_mysql_removed.stat.exists == false
+
+  roles:
+    # I love me some tmux.
+    - role: trinitronx.tmux
+
+    # @todo: Dynamically set nginx_worker_processes to number of cores in the VM by passing the number of CPUs in the VM to Ansible
+    - role: geerlingguy.nginx
+
+    - role: geerlingguy.php # vars in vars/main.yml
+
+    - role: geerlingguy.php-pear
+      php_pear_channels:
+      php_pear_libraries:
+        - Console_Table-1.1.3
+
+    - role: geerlingguy.drush
+      drush_version: 6.x
+      drush_keep_updated: yes
+
+    - role: pcextreme.mariadb
+
+    - role: geerlingguy.php-memcached
+    - role: geerlingguy.memcached
+
+    - role: geerlingguy.php-pecl
+
+    - role: geerlingguy.php-xdebug
+      php_xdebug_remote_enable: true
+      php_xdebug_remote_connect_back: true
+      php_xdebug_idekey: example.xdebug
+      php_xdebug_version: 2.2.6
+      php_xdebug_enable_cli: 0
+      php_xdebug_default_enable: 1
+      php_xdebug_coverage_enable: 0
+
+    - role: geerlingguy.php-xhprof
+
+    - role: rvm_io.rvm1-ruby
+      rvm1_rubies:
+        - 'ruby-2.1.3'
+        # For Quickbuild
+        - 'ruby-2.0.0'
+        - 'ruby-1.9.3'
+
+  tasks:
+    - name: add marker file so we won't try to uninstall mysql anymore
+      file: state=touch dest={{ ansible_env.HOME }}/.example-drupal-mysql-removed
+      when: example_drupal_mysql_removed.stat.exists == false
+
+    - name: (temporary) add additional host aliases that vagrant-hostmanager did not
+      lineinfile: regexp='^127\.0\.0\.1 ' dest=/etc/hosts line='127.0.0.1 {{ vagrant_hostmanager_aliases }}'
+
+    - name: install essential packages
+      yum: name={{ item }}
+      with_items:
+        - htop
+        - vim
+        # LXC box needs it
+        - tar
+
+    - name: symlink Drupal to files directory shared from Vagrant
+      file: state=link src={{ path_to_drupal_shared_files }} dest={{ path_to_drupal }}/sites/default/files force=true
+
+    - name: install MySQL-python package so we can create database/user
+      yum: name=MySQL-python # case-sensitive
+
+    - name: configure mysql (MariaDB)
+      template: src=templates/mysql/my.cnf dest=/etc/my.cnf.d/my.cnf
+      notify: restart mysql
+
+    - name: create drupal database
+      # @todo: Use state=import and allow using an import if the database is empty (can create a control file like we did with the one-time
+      mysql_db: name=drupal
+    - name: create drupal user
+      # @todo: Use lookup() in Ansible to generate a password and save it to a local gitignored file
+      mysql_user: name=drupal password=drupal priv=drupal.*:ALL
+
+    - name: configure php-fpm pool
+      template: src=templates/php-fpm/pool.d/vagrant.conf dest=/etc/php-fpm.d/vagrant.conf
+      notify: restart php-fpm
+
+    - name: don't require session key to start XDebug
+      lineinfile: regexp='' insertafter='EOF' line='xdebug.remote_autostart = 1' dest=/etc/php.d/xdebug-extra.ini create=yes
+      notify: restart php-fpm
+
+    - name: remove default nginx configuration
+      file: name=/etc/nginx/conf.d/default.conf state=absent
+    - file: name=/etc/nginx/conf.d/example_ssl.conf state=absent
+
+    - name: create nginx directories
+      file: state=directory dest={{ item }}
+      with_items:
+        - /etc/nginx/ssl
+        - /etc/nginx/includes
+
+    - name: configure nginx
+      copy: src={{ item.src }} dest={{ item.dest }}
+      with_items:
+        - { src: templates/nginx/includes/, dest: /etc/nginx/includes/ }
+        - { src: templates/nginx/conf.d/, dest: /etc/nginx/conf.d/ }
+        - { src: templates/nginx/ssl/, dest: /etc/nginx/ssl/ }
+      notify: restart nginx
+
+    - name: add vagrant to rvm group
+      user: name=vagrant groups=rvm
+
+    - name: symlink drush into /usr/bin (Capistrano looks for it there)
+      file: state=link src=/usr/local/bin/drush dest=/usr/bin/drush
+
+# Play 2
+- name: complete setup as local vagrant user
+  hosts: all
+  vars_files:
+    - vars/main.yml
+
+  tasks:
+    - name: create convenience symlink to shared vagrant directory
+      file: state=link src={{ path_to_drupal_repo }} dest={{ ansible_env.HOME }}/drupal
+
+    - name: if parallels, override virtualization type variable
+      include_vars: vars/parallels.yml
+      when: 'ansible_virtualization_type == "parallels"'
+
+    - name: if lxc, override virtualization type variable
+      include_vars: vars/lxc.yml
+      when: 'ansible_virtualization_type == "lxc"'
+
+    - name: add config file for SSH
+      template: src=templates/ssh/vagrant-ssh-config.j2 dest={{ ansible_env.HOME }}/.ssh/config mode=600
+
+    - file: state=directory mode=755 dest={{ path_to_drupal }}/sites/default
+    - name: add settings.local.php to drupal
+      template: src=templates/drupal/settings.local.php.j2 dest={{ path_to_drupal }}/sites/default/settings.local.php
+
+    - name: install .gemrc
+      template: src=templates/vagrant-gemrc.j2 dest={{ ansible_env.HOME }}/.gemrc
+
+    # @todo: Make an "rvm_gem" module for this or maybe a PR adding an rvm=true flag
+    - stat: path={{ ansible_env.HOME }}/.example-drupal-rvm-perms-fixed-2
+      register: example_drupal_rvm_perms_fixed
+
+    - name: fix rvm permissions
+      shell: bash -lc "rvm fix-permissions system"
+      when: example_drupal_rvm_perms_fixed.stat.exists == false
+
+    - file: state=touch dest={{ ansible_env.HOME }}/.example-drupal-rvm-perms-fixed-2
+      when: example_drupal_rvm_perms_fixed.stat.exists == false
+
+    - name: install example/drupal npm packages
+      npm: state=latest path={{ path_to_drupal_repo }}
+
+    - name: install capistrano gems (if nokogiri fails, try running this again)
+      shell: bash -lc "cd {{ path_to_drupal }} && gem install {{ item.gem }} --version {{ item.version }}"
+      args:
+        creates: '{{ ansible_env.GEM_HOME }}/gems/{{ item.gem }}-{{ item.version }}'
+      with_items:
+        # Full version MUST be specified here cuz of our ghetto creates logic
+        - { gem: capistrano, version: 2.15.5 }
+        - { gem: capistrano-ext, version: 1.2.1 } # depends on Capistrano
+        - { gem: capistrano_colors, version: 0.5.5 }
+        - { gem: f5-icontrol, version: 10.2.0.2 }
+        - { gem: nokogiri, version: 1.6.5 }
+
+    - name: create deploy directory for Capistrano config
+      file: state=directory dest={{ path_to_drupal }}/config/deploy
+
+    - name: create local.rb in drupal's config directory
+      template: src=templates/drupal/capistrano/local.rb.j2 dest={{ path_to_drupal }}/config/deploy/local.rb
+
+    - name: set up cronjob for drupal
+      cron: name='Run Drupal cron.' minute=*/5 job='curl --silent --compressed http://{{ primary_domain }}/cron.php?cron_key={{ example_drupal_cron_key }}'
+
