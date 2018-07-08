@@ -4,16 +4,21 @@ drupal_install_site: true
 drupal_build_composer_project: false
 drupal_composer_project_package: "AdrianVazquez/drupal-project"
 drupal_composer_project_options: "--prefer-dist --no-interaction"
-drupal_composer_install_dir: "/var/www/drupal"
 
 
-drupal_deploy: true
+drupal_deploy: false
 drupal_deploy_repo: "https://github.com/drupal/drupal/"
 drupal_deploy_version: 7.10
 drupal_deploy_update: true
 drupal_deploy_dir: "/var/www/drupal"
 drupal_deploy_accept_hostkey: yes
 drupal_deploy_composer_install: yes
+
+drupal_build_composer: true
+drupal_composer_path: "./drupal.composer.json"
+drupal_composer_install_dir: "/var/www/drupal"
+
+
 
 drupal_domain: "drupaltest.test"
 drupal_site_name: "Drupal"

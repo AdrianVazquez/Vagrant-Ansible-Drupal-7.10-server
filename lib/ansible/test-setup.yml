@@ -44,3 +44,23 @@
     force: yes
   when: ansible_distribution == 'Ubuntu' and ansible_distribution_version == '14.04'
   changed_when: false
+
+- name: Create directory (Drupal install)
+  file: path=/var/www/drupal state=directory
+
+- name: Create directory for composer dependencies (Drupal install)
+  file: path=/var/www/drupal/scripts/composer state=directory
+
+- name: Copy load_enviroment for composer (Drupal install)
+  copy:
+    src: composer_dep/load.environment.php
+    dest: /var/www/drupal/load.environment.php
+    mode: 0755
+    force: yes
+
+- name: Copy ScriptHandler for composer (Drupal install)
+  copy:
+    src: composer_dep/scripts/composer/ScriptHandler.php
+    dest: /var/www/drupal/scripts/composer/ScriptHandler.php
+    mode: 0755
+    force: yes    
