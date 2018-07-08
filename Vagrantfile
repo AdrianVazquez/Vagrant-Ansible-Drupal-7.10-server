@@ -69,7 +69,7 @@ Vagrant.configure(2) do |config|
 
   ######## SHARED FOLDERS ##########
   config.vm.synced_folder ".", "/data/apps/drupal/current"
-  config.vm.synced_folder "/home/adri93/Escritorio/Code/TFM/drupal-vagrant/datos/", "/data/apps/drupal/shared/files"
+  config.vm.synced_folder "/home/adri93/Escritorio/Code/TFM/drupal-vagrant/datos/", "/var/www/drupal/web/"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -103,7 +103,7 @@ Vagrant.configure(2) do |config|
     # Set nfs: false in vagrant.yml to use regular VBox Shared Folders.
     if settings and settings.has_key? 'nfs' and settings['nfs'] == 'false'
       override.vm.synced_folder ".", "/data/apps/drupal/current", type: nil
-      override.vm.synced_folder "data/files", "/data/apps/drupal/shared/files", :type => nil
+      override.vm.synced_folder "data/files", "/var/www/drupal/web/", :type => nil
     end
   end
 
