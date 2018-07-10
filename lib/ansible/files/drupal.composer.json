@@ -30,13 +30,12 @@
         "drupal-composer/preserve-paths": "^0.1",
         "drupal/composer_autoloader": "^1.0",
         "drupal/drupal": "7.10",
-        "drush/drush": "~8.0",
+        "drush/drush": "6.x",
         "symfony/filesystem": "~2.7|^3",
-        "webflo/drupal-finder": "^1.0.0"
-    },
-    "require-dev": {
+        "webflo/drupal-finder": "^1.0.0",
         "drupal/devel": "~1.0"
     },
+
     "conflict": {
         "drupal/core": "8.*"
     },

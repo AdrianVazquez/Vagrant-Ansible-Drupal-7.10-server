@@ -10,15 +10,24 @@
   roles:
     - name: geerlingguy.repo-remi
       when: ansible_os_family == "RedHat"
+      become: yes
     - role: geerlingguy.repo-dotdeb
       when: ansible_distribution == 'Debian'
-    - geerlingguy.apache
-    - geerlingguy.mysql
-    - geerlingguy.php
-    - geerlingguy.php-mysql
-    - geerlingguy.git
-    - geerlingguy.composer
-    - geerlingguy.drush
+      become: yes
+    - role: geerlingguy.apache
+      become: yes
+    - role: geerlingguy.mysql
+      become: yes
+    - role: geerlingguy.php
+      become: yes
+    - role: geerlingguy.php-mysql
+      become: yes
+    - role: geerlingguy.git
+      become: yes    
+    - role: geerlingguy.composer
+      become: yes   
+    - role: geerlingguy.drush
+      become: yes
     - geerlingguy.drupal
 
 

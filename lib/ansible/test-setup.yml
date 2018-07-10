@@ -9,6 +9,7 @@
     - curl
     - unzip
     - sendmail
+  become: yes
 
 - name: Add repository for Apache 2.4.9+ (Ubuntu 14).
   apt_repository: repo='ppa:ondrej/apache2'
@@ -31,7 +32,6 @@
       - php7.0-apcu
       - php7.0-xml
       - php7.0-zip
-      - php7.0-mbstring
       - php7.0-json
       - php7.0-gd
   when: ansible_distribution == 'Debian'
@@ -46,21 +46,81 @@
   changed_when: false
 
 - name: Create directory (Drupal install)
-  file: path=/var/www/drupal state=directory
+  file: 
+    path: /var/www/drupal
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: 0755
+  become: yes
 
-- name: Create directory for composer dependencies (Drupal install)
-  file: path=/var/www/drupal/scripts/composer state=directory
+- name: Create directory for composer dependencies 1/2 (Drupal install)
+  file: 
+    path: /var/www/drupal/scripts 
+    state: directory
+    owner: vagrant
+    group: vagrant
+    mode: 0755
+  become: yes
+
+- name: Create directory for composer dependencies 2/2 (Drupal install)
+  file: 
+    path: /var/www/drupal/scripts/composer
+    owner: vagrant
+    group: vagrant
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: Create directory for drush dependencies (Drupal install)
+  file: 
+    path: /var/www/drupal/web/drush
+    owner: vagrant
+    group: vagrant
+    state: directory
+    mode: 0755
+  become: yes
 
 - name: Copy load_enviroment for composer (Drupal install)
   copy:
     src: composer_dep/load.environment.php
     dest: /var/www/drupal/load.environment.php
-    mode: 0755
+    mode: 0644
     force: yes
 
 - name: Copy ScriptHandler for composer (Drupal install)
   copy:
     src: composer_dep/scripts/composer/ScriptHandler.php
     dest: /var/www/drupal/scripts/composer/ScriptHandler.php
-    mode: 0755
+    mode: 0644
     force: yes    
+
+- name: Copy ScriptHandler for composer (Drupal install)
+  copy:
+    src: composer_dep/drush/policy.drush.inc
+    dest: /var/www/drupal/web/drush/policy.drush.inc
+    mode: 0644
+    force: yes    
+
+- name: Copy composer.json (Drupal install)
+  copy:
+    src: drupal.composer.json
+    dest: /var/www/drupal/composer.json
+    mode: 0644
+    force: yes
+
+- name: Create directory for settings(Drupal install)
+  file: 
+    path: /var/www/drupal/web/sites/default/
+    owner: vagrant
+    group: vagrant
+    state: directory
+    mode: 0755
+  become: yes
+
+- name: Copy default.settings (Drupal install)
+  copy:
+    src: default.settings.php
+    dest: /var/www/drupal/web/sites/default/default.settings.php
+    mode: 0644
+    force: yes 
