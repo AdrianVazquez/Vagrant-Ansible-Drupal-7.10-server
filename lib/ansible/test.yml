@@ -22,6 +22,16 @@
       become: yes
     - role: geerlingguy.php-mysql
       become: yes
+
+  post_tasks:
+    - import_tasks: config-php.yml  
+
+
+- hosts: all
+
+  vars_files:
+    - test-vars.yml
+  roles:
     - role: geerlingguy.git
       become: yes    
     - role: geerlingguy.composer

@@ -1,0 +1,72 @@
+---
+- name: PHP mbstring config 1/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: output_buffering
+    value: On
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP mbstring config 2/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: output_handler
+    value: mb_output_handler
+    mode: 0644
+    backup: yes
+  become: yes
+
+
+- name: PHP mbstring config 3/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: mbstring.func_overload
+    value: 0
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP mbstring config 4/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: mbstring.encoding_translation
+    value: off
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP mbstring config 5/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: mbstring.http_output
+    value: pass
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP mbstring config 6/6
+  ini_file:
+    path: /etc/php.ini
+    section: mbstring
+    option: mbstring.http_input
+    value: pass
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP errors config
+  ini_file:
+    path: /etc/php.ini
+    section: null
+    option: error_reporting
+    value: E_ALL & ~E_WARNING  & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED
+    mode: 0644
+    backup: yes
+  become: yes
+
