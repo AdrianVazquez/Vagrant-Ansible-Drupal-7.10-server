@@ -68,8 +68,7 @@ Vagrant.configure(2) do |config|
   # config.vm.synced_folder "../data", "/vagrant_data"
 
   ######## SHARED FOLDERS ##########
-  config.vm.synced_folder ".", "/data/apps/drupal/current"
-  config.vm.synced_folder "/home/adri93/Escritorio/Code/TFM/drupal-vagrant/datos/", "/var/www/drupal/web/"
+  config.vm.synced_folder "./web/", "/var/www/drupal/"
 
   # Provider-specific configuration so you can fine-tune various
   # backing providers for Vagrant. These expose provider-specific options.
@@ -102,8 +101,7 @@ Vagrant.configure(2) do |config|
     # NFS doesn't work for VPN users. Let them configure something else.
     # Set nfs: false in vagrant.yml to use regular VBox Shared Folders.
     if settings and settings.has_key? 'nfs' and settings['nfs'] == 'false'
-      override.vm.synced_folder ".", "/data/apps/drupal/current", type: nil
-      override.vm.synced_folder "data/files", "/var/www/drupal/web/", :type => nil
+      override.vm.synced_folder "./web/", "/var/www/drupal/", :type => nil
     end
   end
 
@@ -118,8 +116,7 @@ Vagrant.configure(2) do |config|
     override.vm.network "private_network", ip: machine_ip
 
     if settings and settings.has_key? 'nfs' and settings['nfs'] == 0
-      override.vm.synced_folder ".", "/data/apps/drupal/current", type: nil
-      override.vm.synced_folder "data/files", "/data/apps/drupal/shared/files", :type => nil
+      override.vm.synced_folder "./web/", "/var/www/drupal/", :type => nil
     end
   end
 
@@ -127,8 +124,7 @@ Vagrant.configure(2) do |config|
     # I think LXC just shares host resources by default.
 
     override.vm.box = 'fgrehm/centos-6-64-lxc'
-    override.vm.synced_folder ".", "/data/apps/drupal/current"
-    override.vm.synced_folder "data/files", "/data/apps/drupal/shared/files"
+    override.vm.synced_folder "./web/", "/var/www/drupal/"
 
     machine_ip = (settings && settings.has_key?('lxc_ip') and settings['lxc_ip']) ? settings['lxc_ip'] : '10.214.55.50'
     override.vm.network "private_network", ip: machine_ip
@@ -150,7 +146,7 @@ Vagrant.configure(2) do |config|
 
   ###### ANSIBLE SETUP ########
   config.vm.provision "ansible" do |ansible|
-    ansible.playbook = "lib/ansible/test.yml"
+    ansible.playbook = "lib/ansible/drupal.yml"
     ansible.extra_vars = {
         'vagrant_hostmanager_aliases' => (config.hostmanager.aliases.join ' '),
     }

@@ -63,9 +63,19 @@
 - name: PHP errors config
   ini_file:
     path: /etc/php.ini
-    section: null
+    section:
     option: error_reporting
     value: E_ALL & ~E_WARNING  & ~E_NOTICE & ~E_STRICT & ~E_DEPRECATED
+    mode: 0644
+    backup: yes
+  become: yes
+
+- name: PHP date config
+  ini_file:
+    path: /etc/php.ini
+    section: Date
+    option: date.timezone
+    value: Europe/Madrid
     mode: 0644
     backup: yes
   become: yes

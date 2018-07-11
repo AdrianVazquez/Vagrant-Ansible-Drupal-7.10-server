@@ -2,10 +2,10 @@
 - hosts: all
 
   vars_files:
-    - test-vars.yml
+    - drupal-install-vars.yml
 
   pre_tasks:
-    - import_tasks: test-setup.yml
+    - import_tasks: server-pretask-setup.yml
 
   roles:
     - name: geerlingguy.repo-remi
@@ -30,7 +30,7 @@
 - hosts: all
 
   vars_files:
-    - test-vars.yml
+    - drupal-install-vars.yml
   roles:
     - role: geerlingguy.git
       become: yes    

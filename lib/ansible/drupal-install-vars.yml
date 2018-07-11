@@ -2,8 +2,6 @@
 drupal_install_site: true
 
 drupal_build_composer_project: false
-drupal_composer_project_package: "AdrianVazquez/drupal-project"
-drupal_composer_project_options: "--prefer-dist --no-interaction"
 
 
 drupal_deploy: false
